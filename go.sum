@@ -1,0 +1,14 @@
+github.com/DisgoOrg/disgo v0.5.12-0.20210918125404-2b6a3d8bc34b h1:6lhUvx4Gs3j74lpiOdDWsrfW5OjebBv36HU74n73C7M=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918125404-2b6a3d8bc34b/go.mod h1:no2sZaFMgy+EohEuTeQA+08Rvfu+VsiY5wsC7FMIcmE=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918152317-9aead12e22e2 h1:rTHdDu5c08nwlis4iSrc0v1QEmSIwcX0Ihi22jVHGas=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918152317-9aead12e22e2/go.mod h1:no2sZaFMgy+EohEuTeQA+08Rvfu+VsiY5wsC7FMIcmE=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918152824-33b5ee2e70b9 h1:UbIZ7G5KnEOZJZyEh5zW8IyU29jaV3yswgMERT5I+i8=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918152824-33b5ee2e70b9/go.mod h1:no2sZaFMgy+EohEuTeQA+08Rvfu+VsiY5wsC7FMIcmE=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918154309-0a2a89c680df h1:20sH5NOD2M1HjBh/Fc5UEGUJIL1bssSRxy41wuozf6s=
+github.com/DisgoOrg/disgo v0.5.12-0.20210918154309-0a2a89c680df/go.mod h1:no2sZaFMgy+EohEuTeQA+08Rvfu+VsiY5wsC7FMIcmE=
+github.com/DisgoOrg/log v1.1.2 h1:tGJS4jaH1PyjPRHybHp8WpYJ/4fR3fYWT4Mv1PoDGBM=
+github.com/DisgoOrg/log v1.1.2/go.mod h1:tSMofXaNhQNvzLRoL4tAiCG9yGY1ES5DLvduh7e9GRU=
+github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
+github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
