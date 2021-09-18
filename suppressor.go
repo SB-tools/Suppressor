@@ -26,11 +26,11 @@ func main() {
 		}).
 		AddEventListeners(&core.ListenerAdapter{
 			OnGuildMessageReactionAdd: onReaction,
-			OnGuildMessageCreate: onMessage,
+			OnGuildMessageCreate:      onMessage,
 		}).SetCacheConfig(core.CacheConfig{
-			MemberCachePolicy: core.MemberCachePolicyNone,
-			CacheFlags: core.CacheFlagsNone,
-		}).
+		MemberCachePolicy: core.MemberCachePolicyNone,
+		CacheFlags:        core.CacheFlagsNone,
+	}).
 		Build()
 
 	if err != nil {
@@ -62,8 +62,9 @@ func onReaction(event *core.GuildMessageReactionAddEvent) {
 }
 
 func onMessage(event *core.GuildMessageCreateEvent) {
-	if len(event.Message.Stickers) != 0 && !isVip(event.Message.Member) {
-		_ = event.Message.Delete(rest.WithReason("Stickers are not allowed"))
+	message := event.Message
+	if len(message.Stickers) != 0 && !isVip(message.Member) {
+		_ = message.Delete(rest.WithReason("Stickers are not allowed"))
 	}
 }
 
