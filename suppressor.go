@@ -14,8 +14,8 @@ import (
 
 var (
 	token    = os.Getenv("suppressor")
-	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(\\s+)?block|sb|server)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsorblock|sb|server) crash(?:ed)?",
-		"(?:issue(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsorblock|sb|server)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
+	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(\\s+)?block|sb|server)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(\\s+)?block|sb|server) crash(?:ed)?",
+		"(?:issue(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(\\s+)?block|sb|server)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
 		"(?:can't|cannot) submit"}
 	down    = false
 	regexes []*regexp.Regexp
