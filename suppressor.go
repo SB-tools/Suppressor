@@ -31,7 +31,7 @@ var (
 					Type:        discord.ApplicationCommandOptionTypeBoolean,
 					Name:        "down",
 					Description: "whether the server is down",
-					Required:    true,
+					Required:    false,
 				},
 			},
 		},
@@ -124,8 +124,14 @@ func onSlashCommand(event *core.SlashCommandEvent) {
 				Build())
 			return
 		}
-
-		down = event.Options.Get("down").Bool()
+		downOption := event.Options.Get("down")
+		if downOption == nil {
+			_ = event.Create(messageBuilder.
+				SetContentf("server down status is currently set to `%t`", down).
+				Build())
+			return
+		}
+		down = downOption.Bool()
 		_ = event.Create(messageBuilder.
 			SetContentf("server down status has been set to `%t`", down).
 			Build())
