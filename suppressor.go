@@ -122,7 +122,7 @@ func onSlashCommand(event *core.SlashCommandEvent) {
 		downOption := event.Options.Get("down")
 		if downOption == nil {
 			_ = event.Create(messageBuilder.
-				SetContentf("The server is currently treated as %s", formatStatus(down)).
+				SetContentf("The server is currently treated as **%s**.", formatStatus(down)).
 				Build())
 			return
 		}
@@ -134,7 +134,7 @@ func onSlashCommand(event *core.SlashCommandEvent) {
 		}
 		down = downOption.Bool()
 		_ = event.Create(messageBuilder.
-			SetContentf("The server is now treated as `%s`", formatStatus(down)).
+			SetContentf("The server is now treated as **%s**.", formatStatus(down)).
 			Build())
 	}
 }
