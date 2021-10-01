@@ -119,22 +119,22 @@ func onMessage(event *core.GuildMessageCreateEvent) {
 func onSlashCommand(event *core.SlashCommandEvent) {
 	if event.CommandName == "down" {
 		messageBuilder := core.NewMessageCreateBuilder()
+		downOption := event.Options.Get("down")
+		if downOption == nil {
+			_ = event.Create(messageBuilder.
+				SetContentf("The server is currently treated as **%s**.", formatStatus(down)).
+				Build())
+			return
+		}
 		if !isVip(event.Member) {
 			_ = event.Create(messageBuilder.
 				SetContent("This command is VIP only.").
 				Build())
 			return
 		}
-		downOption := event.Options.Get("down")
-		if downOption == nil {
-			_ = event.Create(messageBuilder.
-				SetContentf("server down status is currently set to `%t`", down).
-				Build())
-			return
-		}
 		down = downOption.Bool()
 		_ = event.Create(messageBuilder.
-			SetContentf("server down status has been set to `%t`", down).
+			SetContentf("The server is now treated as **%s**.", formatStatus(down)).
 			Build())
 	}
 }
@@ -147,4 +147,14 @@ func isVip(member *core.Member) bool {
 		}
 	}
 	return false
+}
+
+func formatStatus(downStatus bool) string {
+	var status string
+	if downStatus {
+		status = "offline"
+	} else {
+		status = "online"
+	}
+	return status
 }
