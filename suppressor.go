@@ -130,6 +130,7 @@ func onSlashCommand(event *core.SlashCommandEvent) {
 		if !isVip(event.Member) {
 			_ = event.Create(messageBuilder.
 				SetContent("This command is VIP only.").
+				SetEphemeral(true).
 				Build())
 			return
 		}
