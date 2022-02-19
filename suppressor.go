@@ -16,7 +16,7 @@ var (
 	token    = os.Getenv("suppressor")
 	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
 		"(?:(?:issue|problem)(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
-		"(?:can't|cannot) submit"}
+			    "(?:can't|cannot) submit", "403", "can\S+ (?: \S+)? (?:submit)|(?:see)"}
 	down    = false
 	regexes []*regexp.Regexp
 
