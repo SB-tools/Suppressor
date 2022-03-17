@@ -36,9 +36,8 @@ var (
 			},
 		},
 	}
-	guildId              = discord.Snowflake("603643120093233162")
-	vipRoleId            = discord.Snowflake("755511470305050715")
-	submissionsChannelId = discord.Snowflake("655247785561554945")
+	guildId   = discord.Snowflake("603643120093233162")
+	vipRoleId = discord.Snowflake("755511470305050715")
 )
 
 func main() {
@@ -85,12 +84,11 @@ func main() {
 }
 
 func onReaction(event *core.GuildMessageReactionAddEvent) {
-	channelId := event.ChannelID
 	emoji := event.Emoji.Name
-	if emoji == "\u2705" || emoji == "\u274C" && channelId == submissionsChannelId && isVip(event.Member) {
+	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		suppressed := discord.MessageFlagSuppressEmbeds
 		channelService := event.Bot().RestServices.ChannelService()
-		_, _ = channelService.UpdateMessage(channelId, event.MessageID, discord.MessageUpdate{
+		_, _ = channelService.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
 			Flags: &suppressed,
 		})
 	}
