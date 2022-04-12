@@ -2,6 +2,8 @@ module suppressor
 
 go 1.17
 
+// +heroku goVersion go1.17
+
 require (
 	github.com/DisgoOrg/disgo v0.5.12-0.20210927100611-936ea2c0659a
 	github.com/DisgoOrg/log v1.1.2
