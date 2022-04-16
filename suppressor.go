@@ -108,7 +108,7 @@ func onMessage(event *core.GuildMessageCreateEvent) {
 	for _, regex := range regexes {
 		if regex.MatchString(content) {
 			_, _ = event.Channel().CreateMessage(core.NewMessageCreateBuilder().
-				SetContent("SponsorBlock is down at the moment. Stay updated at <https://status.sponsor.ajay.app/>").
+				SetContent("SponsorBlock is down at the moment. Stay updated at <https://sponsorblock.works>").
 				Build())
 			return
 		}
