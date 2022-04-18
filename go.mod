@@ -1,8 +1,8 @@
 module suppressor
 
-go 1.17
+go 1.18
 
-// +heroku goVersion go1.17
+// +heroku goVersion go1.18
 
 require (
 	github.com/disgoorg/disgo v0.8.9
