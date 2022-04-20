@@ -83,6 +83,8 @@ func main() {
 		regexes = append(regexes, regexp.MustCompile(variant))
 	}
 
+	log.Info("suppressor started")
+
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-s
