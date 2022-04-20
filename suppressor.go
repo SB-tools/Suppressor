@@ -90,7 +90,7 @@ func main() {
 
 func onReaction(event *events.GuildMessageReactionAddEvent) {
 	emoji := event.Emoji.Name
-	if (emoji == "\u2705" || emoji == "\u274C") && isVip(&event.Member) {
+	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		suppressed := discord.MessageFlagSuppressEmbeds
 		channelService := event.Client().Rest().Channels()
 		_, _ = channelService.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
@@ -101,13 +101,16 @@ func onReaction(event *events.GuildMessageReactionAddEvent) {
 
 func onMessage(event *events.GuildMessageCreateEvent) {
 	message := event.Message
-	isVip := isVip(message.Member)
+	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
+		return
+	}
+	member := *message.Member
 	channelsRest := event.Client().Rest().Channels()
-	if len(message.Stickers) != 0 && !isVip {
+	if len(message.Stickers) != 0 && !isVip(member) {
 		_ = channelsRest.DeleteMessage(message.ChannelID, message.ID)
 		return
 	}
-	if !down || message.Author.Bot || isVip {
+	if !down || isVip(member) {
 		return
 	}
 	content := strings.ToLower(message.Content)
@@ -132,7 +135,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionEvent) {
 				Build())
 			return
 		}
-		if !isVip(&event.Member().Member) {
+		if !isVip(event.Member().Member) {
 			_ = event.CreateMessage(messageBuilder.
 				SetContent("This command is VIP only.").
 				SetEphemeral(true).
@@ -146,7 +149,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionEvent) {
 	}
 }
 
-func isVip(member *discord.Member) bool {
+func isVip(member discord.Member) bool {
 	roles := member.RoleIDs
 	for _, roleId := range roles {
 		if roleId == vipRoleId {
