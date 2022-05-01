@@ -2,6 +2,12 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"regexp"
+	"strings"
+	"syscall"
+
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -10,11 +16,6 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake"
-	"os"
-	"os/signal"
-	"regexp"
-	"strings"
-	"syscall"
 )
 
 var (
@@ -74,7 +75,7 @@ func main() {
 		return
 	}
 
-	_, err = client.Rest().Applications().SetGuildCommands(client.ApplicationID(), guildId, commands)
+	_, err = client.Rest().SetGuildCommands(client.ApplicationID(), guildId, commands)
 	if err != nil {
 		log.Fatalf("error while registering commands: %s", err)
 	}
@@ -94,8 +95,7 @@ func onReaction(event *events.GuildMessageReactionAddEvent) {
 	emoji := event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		suppressed := discord.MessageFlagSuppressEmbeds
-		channelService := event.Client().Rest().Channels()
-		_, _ = channelService.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
+		_, _ = event.Client().Rest().UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
 			Flags: &suppressed,
 		})
 	}
@@ -107,9 +107,9 @@ func onMessage(event *events.GuildMessageCreateEvent) {
 		return
 	}
 	member := *message.Member
-	channelsRest := event.Client().Rest().Channels()
+	rest := event.Client().Rest()
 	if len(message.Stickers) != 0 && !isVip(member) {
-		_ = channelsRest.DeleteMessage(message.ChannelID, message.ID)
+		_ = rest.DeleteMessage(message.ChannelID, message.ID)
 		return
 	}
 	if !down || isVip(member) {
@@ -118,7 +118,7 @@ func onMessage(event *events.GuildMessageCreateEvent) {
 	content := strings.ToLower(message.Content)
 	for _, regex := range regexes {
 		if regex.MatchString(content) {
-			_, _ = channelsRest.CreateMessage(event.ChannelID, discord.NewMessageCreateBuilder().
+			_, _ = rest.CreateMessage(event.ChannelID, discord.NewMessageCreateBuilder().
 				SetContent("SponsorBlock is down at the moment. Stay updated at <https://sponsorblock.works>").
 				Build())
 			return
