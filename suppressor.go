@@ -10,6 +10,7 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake"
+	"golang.org/x/exp/slices"
 	"os"
 	"os/signal"
 	"regexp"
@@ -152,13 +153,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionEvent) {
 }
 
 func isVip(member discord.Member) bool {
-	roles := member.RoleIDs
-	for _, roleId := range roles {
-		if roleId == vipRoleId {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(member.RoleIDs, vipRoleId)
 }
 
 func formatStatus(downStatus bool) string {
