@@ -9,7 +9,7 @@ import (
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/log"
-	"github.com/disgoorg/snowflake"
+	"github.com/disgoorg/snowflake/v2"
 	"golang.org/x/exp/slices"
 	"os"
 	"os/signal"
@@ -23,25 +23,9 @@ var (
 	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
 		"(?:(?:issue|problem)(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
 		"(?:can't|cannot) submit"}
-	down    = false
-	regexes []*regexp.Regexp
-
-	commands = []discord.ApplicationCommandCreate{
-		discord.SlashCommandCreate{
-			CommandName:       "down",
-			Description:       "sets whether the server is down (enables wordlist checking)",
-			DefaultPermission: true,
-			Options: []discord.ApplicationCommandOption{
-				discord.ApplicationCommandOptionBool{
-					Name:        "down",
-					Description: "whether the server is down",
-					Required:    false,
-				},
-			},
-		},
-	}
-	guildId   = snowflake.Snowflake("603643120093233162")
-	vipRoleId = snowflake.Snowflake("755511470305050715")
+	down      = false
+	regexes   []*regexp.Regexp
+	vipRoleId = snowflake.ID(755511470305050715)
 )
 
 func main() {
@@ -50,12 +34,8 @@ func main() {
 	log.Info("disgo version: ", disgo.Version)
 
 	client, err := disgo.New(token,
-		bot.WithGatewayConfigOpts(gateway.WithGatewayIntents(discord.GatewayIntentGuildMessages, discord.GatewayIntentGuildMessageReactions,
-			discord.GatewayIntentGuilds)),
-		bot.WithCacheConfigOpts(
-			cache.WithCacheFlags(cache.FlagGuildTextChannels),
-			cache.WithMemberCachePolicy(cache.MemberCachePolicyNone),
-		),
+		bot.WithGatewayConfigOpts(gateway.WithIntents(gateway.IntentGuildMessages, gateway.IntentGuildMessageReactions, gateway.IntentGuilds)),
+		bot.WithCacheConfigOpts(cache.WithCacheFlags(cache.FlagChannels)),
 		bot.WithEventListeners(&events.ListenerAdapter{
 			OnGuildMessageReactionAdd:       onReaction,
 			OnGuildMessageCreate:            onMessage,
@@ -75,11 +55,6 @@ func main() {
 		return
 	}
 
-	_, err = client.Rest().Applications().SetGuildCommands(client.ApplicationID(), guildId, commands)
-	if err != nil {
-		log.Fatalf("error while registering commands: %s", err)
-	}
-
 	for _, variant := range wordlist {
 		regexes = append(regexes, regexp.MustCompile(variant))
 	}
@@ -91,24 +66,24 @@ func main() {
 	<-s
 }
 
-func onReaction(event *events.GuildMessageReactionAddEvent) {
+func onReaction(event *events.GuildMessageReactionAdd) {
 	emoji := event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		suppressed := discord.MessageFlagSuppressEmbeds
-		channelService := event.Client().Rest().Channels()
+		channelService := event.Client().Rest()
 		_, _ = channelService.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
 			Flags: &suppressed,
 		})
 	}
 }
 
-func onMessage(event *events.GuildMessageCreateEvent) {
+func onMessage(event *events.GuildMessageCreate) {
 	message := event.Message
 	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
 		return
 	}
 	member := *message.Member
-	channelsRest := event.Client().Rest().Channels()
+	channelsRest := event.Client().Rest()
 	if len(message.Stickers) != 0 && !isVip(member) {
 		_ = channelsRest.DeleteMessage(message.ChannelID, message.ID)
 		return
@@ -127,11 +102,11 @@ func onMessage(event *events.GuildMessageCreateEvent) {
 	}
 }
 
-func onSlashCommand(event *events.ApplicationCommandInteractionEvent) {
+func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 	data := event.SlashCommandInteractionData()
 	if data.CommandName() == "down" {
 		messageBuilder := discord.NewMessageCreateBuilder()
-		downOption, ok := data.BoolOption("down")
+		downOption, ok := data.OptBool("down")
 		if !ok {
 			_ = event.CreateMessage(messageBuilder.
 				SetContentf("The server is currently treated as **%s**.", formatStatus(down)).
@@ -145,7 +120,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionEvent) {
 				Build())
 			return
 		}
-		down = downOption.Value
+		down = downOption
 		_ = event.CreateMessage(messageBuilder.
 			SetContentf("The server is now treated as **%s**.", formatStatus(down)).
 			Build())
