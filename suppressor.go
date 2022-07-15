@@ -34,7 +34,7 @@ func main() {
 	log.Info("disgo version: ", disgo.Version)
 
 	client, err := disgo.New(token,
-		bot.WithGatewayConfigOpts(gateway.WithIntents(gateway.IntentGuildMessages, gateway.IntentGuildMessageReactions, gateway.IntentGuilds)),
+		bot.WithGatewayConfigOpts(gateway.WithIntents(gateway.IntentGuildMessages, gateway.IntentGuildMessageReactions, gateway.IntentGuilds, gateway.IntentMessageContent)),
 		bot.WithCacheConfigOpts(cache.WithCacheFlags(cache.FlagChannels)),
 		bot.WithEventListeners(&events.ListenerAdapter{
 			OnGuildMessageReactionAdd:       onReaction,
