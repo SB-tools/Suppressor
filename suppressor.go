@@ -8,6 +8,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/disgo/rest"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"golang.org/x/exp/slices"
@@ -23,9 +24,11 @@ var (
 	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
 		"(?:(?:issue|problem)(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
 		"(?:can't|cannot) submit"}
-	down      = false
-	regexes   []*regexp.Regexp
-	vipRoleId = snowflake.ID(755511470305050715)
+	down             = false
+	regexes          []*regexp.Regexp
+	vipRoleID        = snowflake.ID(755511470305050715)
+	privateIDRegex   = regexp.MustCompile("[a-zA-Z\\d-]{36}")
+	requestChannelID = snowflake.ID(1002313036545134713)
 )
 
 func main() {
@@ -69,32 +72,43 @@ func main() {
 func onReaction(event *events.GuildMessageReactionAdd) {
 	emoji := event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
-		suppressed := discord.MessageFlagSuppressEmbeds
-		channelService := event.Client().Rest()
-		_, _ = channelService.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
-			Flags: &suppressed,
-		})
+		suppressEmbeds(event.Client().Rest(), event.ChannelID, event.MessageID)
 	}
 }
 
 func onMessage(event *events.GuildMessageCreate) {
 	message := event.Message
+	content := message.Content
+	client := event.Client().Rest()
+	channelID := event.ChannelID
+	messageBuilder := discord.NewMessageCreateBuilder()
+	messageID := message.ID
+	if privateIDRegex.MatchString(content) {
+		_, _ = client.CreateMessage(channelID, messageBuilder.
+			SetContent("Deleted the message as it contained a private user ID. Please check the pinned messages to see how to obtain your public user ID.").
+			Build())
+		deleteMessage(client, channelID, messageID)
+		return
+	}
+	if channelID == requestChannelID {
+		suppressEmbeds(client, channelID, messageID)
+		return
+	}
 	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
 		return
 	}
 	member := *message.Member
-	channelsRest := event.Client().Rest()
 	if len(message.Stickers) != 0 && !isVip(member) {
-		_ = channelsRest.DeleteMessage(message.ChannelID, message.ID)
+		deleteMessage(client, channelID, messageID)
 		return
 	}
 	if !down || isVip(member) {
 		return
 	}
-	content := strings.ToLower(message.Content)
+	lower := strings.ToLower(content)
 	for _, regex := range regexes {
-		if regex.MatchString(content) {
-			_, _ = channelsRest.CreateMessage(event.ChannelID, discord.NewMessageCreateBuilder().
+		if regex.MatchString(lower) {
+			_, _ = client.CreateMessage(channelID, messageBuilder.
 				SetContent("SponsorBlock is down at the moment. Stay updated at <https://sponsorblock.works>").
 				Build())
 			return
@@ -128,7 +142,18 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 }
 
 func isVip(member discord.Member) bool {
-	return slices.Contains(member.RoleIDs, vipRoleId)
+	return slices.Contains(member.RoleIDs, vipRoleID)
+}
+
+func deleteMessage(client rest.Rest, channelID snowflake.ID, messageID snowflake.ID) {
+	_ = client.DeleteMessage(channelID, messageID)
+}
+
+func suppressEmbeds(client rest.Rest, channelID snowflake.ID, messageID snowflake.ID) {
+	suppressed := discord.MessageFlagSuppressEmbeds
+	_, _ = client.UpdateMessage(channelID, messageID, discord.MessageUpdate{
+		Flags: &suppressed,
+	})
 }
 
 func formatStatus(downStatus bool) string {
