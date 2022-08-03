@@ -118,6 +118,8 @@ func onMessageUpdate(event *events.GuildMessageUpdate) {
 	if event.Message.Embeds != nil && channelID == requestChannelID {
 		suppressEmbeds(event.Client().Rest(), channelID, event.MessageID)
 	}
+
+	// fucking christ I hate railway
 }
 
 func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
