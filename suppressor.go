@@ -27,7 +27,7 @@ var (
 	down             = false
 	regexes          []*regexp.Regexp
 	vipRoleID        = snowflake.ID(755511470305050715)
-	privateIDRegex   = regexp.MustCompile("[a-zA-Z\\d-]{36}")
+	privateIDRegex   = regexp.MustCompile("\b[a-zA-Z\\d-]{36}\b")
 	requestChannelID = snowflake.ID(1002313036545134713)
 )
 
@@ -85,7 +85,7 @@ func onMessage(event *events.GuildMessageCreate) {
 	messageID := message.ID
 	if privateIDRegex.MatchString(content) {
 		_, _ = client.CreateMessage(channelID, messageBuilder.
-			SetContent("Deleted the message as it contained a private user ID. Please check the pinned messages to see how to obtain your public user ID.").
+			SetContentf("Deleted the message as it contained a private user ID. Please check the pinned messages in <#%d> to see how to obtain your public user ID.", requestChannelID).
 			Build())
 		deleteMessage(client, channelID, messageID)
 		return
