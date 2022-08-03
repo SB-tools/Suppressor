@@ -42,7 +42,6 @@ func main() {
 		bot.WithEventListeners(&events.ListenerAdapter{
 			OnGuildMessageReactionAdd:       onReaction,
 			OnGuildMessageCreate:            onMessage,
-			OnGuildMessageUpdate:            onMessageUpdate,
 			OnApplicationCommandInteraction: onSlashCommand,
 		}))
 
@@ -73,7 +72,11 @@ func main() {
 func onReaction(event *events.GuildMessageReactionAdd) {
 	emoji := event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
-		suppressEmbeds(event.Client().Rest(), event.ChannelID, event.MessageID)
+		suppressed := discord.MessageFlagSuppressEmbeds
+		client := event.Client().Rest()
+		_, _ = client.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
+			Flags: &suppressed,
+		})
 	}
 }
 
@@ -113,15 +116,6 @@ func onMessage(event *events.GuildMessageCreate) {
 	}
 }
 
-func onMessageUpdate(event *events.GuildMessageUpdate) {
-	channelID := event.ChannelID
-	if event.Message.Embeds != nil && channelID == requestChannelID {
-		suppressEmbeds(event.Client().Rest(), channelID, event.MessageID)
-	}
-
-	// fucking christ I hate railway
-}
-
 func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 	data := event.SlashCommandInteractionData()
 	if data.CommandName() == "down" {
@@ -153,13 +147,6 @@ func isVip(member discord.Member) bool {
 
 func deleteMessage(client rest.Rest, channelID snowflake.ID, messageID snowflake.ID) {
 	_ = client.DeleteMessage(channelID, messageID)
-}
-
-func suppressEmbeds(client rest.Rest, channelID snowflake.ID, messageID snowflake.ID) {
-	suppressed := discord.MessageFlagSuppressEmbeds
-	_, _ = client.UpdateMessage(channelID, messageID, discord.MessageUpdate{
-		Flags: &suppressed,
-	})
 }
 
 func formatStatus(downStatus bool) string {
