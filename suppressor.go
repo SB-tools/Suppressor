@@ -42,6 +42,7 @@ func main() {
 		bot.WithEventListeners(&events.ListenerAdapter{
 			OnGuildMessageReactionAdd:       onReaction,
 			OnGuildMessageCreate:            onMessage,
+			OnGuildMessageUpdate:            onMessageUpdate,
 			OnApplicationCommandInteraction: onSlashCommand,
 		}))
 
@@ -90,10 +91,6 @@ func onMessage(event *events.GuildMessageCreate) {
 		deleteMessage(client, channelID, messageID)
 		return
 	}
-	if channelID == requestChannelID {
-		suppressEmbeds(client, channelID, messageID)
-		return
-	}
 	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
 		return
 	}
@@ -113,6 +110,13 @@ func onMessage(event *events.GuildMessageCreate) {
 				Build())
 			return
 		}
+	}
+}
+
+func onMessageUpdate(event *events.GuildMessageUpdate) {
+	channelID := event.ChannelID
+	if event.Message.Embeds != nil && channelID == requestChannelID {
+		suppressEmbeds(event.Client().Rest(), channelID, event.MessageID)
 	}
 }
 
