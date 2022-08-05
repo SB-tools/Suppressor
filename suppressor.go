@@ -94,7 +94,7 @@ func onMessage(event *events.GuildMessageCreate) {
 			SetContentf("Deleted the message as it contained a private user ID. Please check the pinned messages in <#%d> to see how to obtain your public user ID.", requestChannelID).
 			Build())
 		go func() {
-			time.Sleep(time.Second * 1)
+			time.Sleep(time.Millisecond * 500)
 			deleteMessage(client, channelID, messageID)
 		}()
 		return
