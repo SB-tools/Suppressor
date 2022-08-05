@@ -1,10 +1,17 @@
 package main
 
 import (
-	"github.com/DisgoOrg/disgo/core"
-	"github.com/DisgoOrg/disgo/discord"
-	"github.com/DisgoOrg/disgo/gateway"
-	"github.com/DisgoOrg/log"
+	"context"
+	"github.com/disgoorg/disgo"
+	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/disgo/rest"
+	"github.com/disgoorg/log"
+	"github.com/disgoorg/snowflake/v2"
+	"golang.org/x/exp/slices"
 	"os"
 	"os/signal"
 	"regexp"
@@ -13,142 +20,134 @@ import (
 )
 
 var (
-	token    = os.Getenv("suppressor")
+	token    = os.Getenv("SUPPRESSOR_TOKEN")
 	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
 		"(?:(?:issue|problem)(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
-			    "(?:can't|cannot) submit", "403", "can\S+ (?: \S+)? (?:submit)|(?:see)"}
-	down    = false
-	regexes []*regexp.Regexp
-
-	commands = []discord.ApplicationCommandCreate{
-		{
-			Type:              discord.ApplicationCommandTypeSlash,
-			Name:              "down",
-			Description:       "sets whether the server is down (enables wordlist checking)",
-			DefaultPermission: true,
-			Options: []discord.ApplicationCommandOption{
-				{
-					Type:        discord.ApplicationCommandOptionTypeBoolean,
-					Name:        "down",
-					Description: "whether the server is down",
-					Required:    false,
-				},
-			},
-		},
-	}
-	guildId              = discord.Snowflake("603643120093233162")
-	vipRoleId            = discord.Snowflake("755511470305050715")
-	submissionsChannelId = discord.Snowflake("655247785561554945")
+		"(?:can't|cannot) submit", "403", "can\S+ (?: \S+)? (?:submit)|(?:see)"}
+	down             = false
+	regexes          []*regexp.Regexp
+	vipRoleID        = snowflake.ID(755511470305050715)
+	privateIDRegex   = regexp.MustCompile("\\b[a-zA-Z\\d]{36}\\b")
+	requestChannelID = snowflake.ID(1002313036545134713)
 )
 
 func main() {
 	log.SetLevel(log.LevelInfo)
+	log.Info("starting the bot...")
+	log.Info("disgo version: ", disgo.Version)
 
-	disgo, err := core.NewBotBuilder(token).
-		SetGatewayConfigOpts(gateway.WithGatewayIntents(discord.GatewayIntentGuildMessages, discord.GatewayIntentGuildMessageReactions,
-			discord.GatewayIntentGuilds)).
-		SetCacheConfigOpts(
-			core.WithCacheFlags(core.CacheFlagTextChannels),
-			core.WithMemberCachePolicy(core.MemberCachePolicyNone),
-		).
-		AddEventListeners(&core.ListenerAdapter{
-			OnGuildMessageReactionAdd: onReaction,
-			OnGuildMessageCreate:      onMessage,
-			OnSlashCommand:            onSlashCommand,
-		}).
-		Build()
+	client, err := disgo.New(token,
+		bot.WithGatewayConfigOpts(gateway.WithIntents(gateway.IntentGuildMessages, gateway.IntentGuildMessageReactions, gateway.IntentGuilds, gateway.IntentMessageContent)),
+		bot.WithCacheConfigOpts(cache.WithCacheFlags(cache.FlagChannels)),
+		bot.WithEventListeners(&events.ListenerAdapter{
+			OnGuildMessageReactionAdd:       onReaction,
+			OnGuildMessageCreate:            onMessage,
+			OnApplicationCommandInteraction: onSlashCommand,
+		}))
 
 	if err != nil {
 		log.Fatal("error while building disgo: ", err)
 		return
 	}
 
-	defer disgo.Close()
+	defer client.Close(context.TODO())
 
-	_, err = disgo.SetGuildCommands(guildId, commands)
+	err = client.OpenGateway(context.TODO())
 	if err != nil {
-		log.Fatalf("error while registering commands: %s", err)
+		log.Fatalf("error while connecting to the gateway: %s", err)
+		return
 	}
 
 	for _, variant := range wordlist {
 		regexes = append(regexes, regexp.MustCompile(variant))
 	}
 
-	err = disgo.ConnectGateway()
-	if err != nil {
-		log.Fatal("error while starting disgo: ", err)
-	}
+	log.Info("suppressor started")
 
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-s
 }
 
-func onReaction(event *core.GuildMessageReactionAddEvent) {
-	channelId := event.ChannelID
+func onReaction(event *events.GuildMessageReactionAdd) {
+	channelID := event.ChannelID
 	emoji := event.Emoji.Name
-	if emoji == "\u2705" || emoji == "\u274C" && channelId == submissionsChannelId && isVip(event.Member) {
+	if channelID != requestChannelID && (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		suppressed := discord.MessageFlagSuppressEmbeds
-		channelService := event.Bot().RestServices.ChannelService()
-		_, _ = channelService.UpdateMessage(channelId, event.MessageID, discord.MessageUpdate{
+		client := event.Client().Rest()
+		_, _ = client.UpdateMessage(channelID, event.MessageID, discord.MessageUpdate{
 			Flags: &suppressed,
 		})
 	}
 }
 
-func onMessage(event *core.GuildMessageCreateEvent) {
+func onMessage(event *events.GuildMessageCreate) {
 	message := event.Message
-	isVip := isVip(message.Member)
-	if len(message.Stickers) != 0 && !isVip {
-		_ = message.Delete()
+	content := message.Content
+	client := event.Client().Rest()
+	channelID := event.ChannelID
+	messageBuilder := discord.NewMessageCreateBuilder()
+	messageID := message.ID
+	if privateIDRegex.MatchString(content) {
+		_, _ = client.CreateMessage(channelID, messageBuilder.
+			SetContentf("Deleted the message as it contained a private user ID. Please check the pinned messages in <#%d> to see how to obtain your public user ID.", requestChannelID).
+			Build())
+		deleteMessage(client, channelID, messageID)
 		return
 	}
-	if !down || message.Author.IsBot || isVip {
+	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
 		return
 	}
-	content := strings.ToLower(message.Content)
+	member := *message.Member
+	if len(message.Stickers) != 0 && !isVip(member) {
+		deleteMessage(client, channelID, messageID)
+		return
+	}
+	if !down || isVip(member) {
+		return
+	}
+	lower := strings.ToLower(content)
 	for _, regex := range regexes {
-		if regex.MatchString(content) {
-			_, _ = event.Channel().CreateMessage(core.NewMessageCreateBuilder().
-				SetContent("SponsorBlock is down at the moment. Stay updated at <https://status.sponsor.ajay.app/>").
+		if regex.MatchString(lower) {
+			_, _ = client.CreateMessage(channelID, messageBuilder.
+				SetContent("SponsorBlock is down at the moment. Stay updated at <https://sponsorblock.works>").
 				Build())
 			return
 		}
 	}
 }
 
-func onSlashCommand(event *core.SlashCommandEvent) {
-	if event.CommandName == "down" {
-		messageBuilder := core.NewMessageCreateBuilder()
-		downOption := event.Options.Get("down")
-		if downOption == nil {
-			_ = event.Create(messageBuilder.
+func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
+	data := event.SlashCommandInteractionData()
+	if data.CommandName() == "down" {
+		messageBuilder := discord.NewMessageCreateBuilder()
+		downOption, ok := data.OptBool("down")
+		if !ok {
+			_ = event.CreateMessage(messageBuilder.
 				SetContentf("The server is currently treated as **%s**.", formatStatus(down)).
 				Build())
 			return
 		}
-		if !isVip(event.Member) {
-			_ = event.Create(messageBuilder.
+		if !isVip(event.Member().Member) {
+			_ = event.CreateMessage(messageBuilder.
 				SetContent("This command is VIP only.").
 				SetEphemeral(true).
 				Build())
 			return
 		}
-		down = downOption.Bool()
-		_ = event.Create(messageBuilder.
+		down = downOption
+		_ = event.CreateMessage(messageBuilder.
 			SetContentf("The server is now treated as **%s**.", formatStatus(down)).
 			Build())
 	}
 }
 
-func isVip(member *core.Member) bool {
-	roles := member.RoleIDs
-	for _, roleId := range roles {
-		if roleId == vipRoleId {
-			return true
-		}
-	}
-	return false
+func isVip(member discord.Member) bool {
+	return slices.Contains(member.RoleIDs, vipRoleID)
+}
+
+func deleteMessage(client rest.Rest, channelID snowflake.ID, messageID snowflake.ID) {
+	_ = client.DeleteMessage(channelID, messageID)
 }
 
 func formatStatus(downStatus bool) string {
