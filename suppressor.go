@@ -17,6 +17,7 @@ import (
 	"regexp"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var (
@@ -92,7 +93,10 @@ func onMessage(event *events.GuildMessageCreate) {
 		_, _ = client.CreateMessage(channelID, messageBuilder.
 			SetContentf("Deleted the message as it contained a private user ID. Please check the pinned messages in <#%d> to see how to obtain your public user ID.", requestChannelID).
 			Build())
-		deleteMessage(client, channelID, messageID)
+		go func() {
+			time.Sleep(time.Second * 1)
+			deleteMessage(client, channelID, messageID)
+		}()
 		return
 	}
 	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
