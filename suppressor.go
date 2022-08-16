@@ -28,7 +28,7 @@ var (
 	down             = false
 	regexes          []*regexp.Regexp
 	vipRoleID        = snowflake.ID(755511470305050715)
-	privateIDRegex   = regexp.MustCompile("\\b[a-zA-Z\\d]{36}\\b")
+	privateIDRegex   = regexp.MustCompile("\\b(?:[a-zA-Z\\d]{36}|[\\da-f]{96})\\b")
 	requestChannelID = snowflake.ID(1002313036545134713)
 )
 
