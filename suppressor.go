@@ -2,6 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"regexp"
+	"strings"
+	"syscall"
+	"time"
+
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
@@ -12,12 +20,6 @@ import (
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"golang.org/x/exp/slices"
-	"os"
-	"os/signal"
-	"regexp"
-	"strings"
-	"syscall"
-	"time"
 )
 
 var (
@@ -25,11 +27,16 @@ var (
 	wordlist = []string{"502", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
 		"(?:(?:issue|problem)(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
 		"(?:can't|cannot) submit"}
+	currentTemplate  = "The server is currently treated as **%s**."
+	updateTemplate   = "The server is now treated as **%s**."
+	incidentTemplate = " Incident resolved after %0.f minutes."
 	down             = false
 	regexes          []*regexp.Regexp
+	lastDowntime     time.Time
 	vipRoleID        = snowflake.ID(755511470305050715)
 	privateIDRegex   = regexp.MustCompile("\\b(?:[a-zA-Z\\d]{36}|[\\da-f]{96})\\b")
 	requestChannelID = snowflake.ID(1002313036545134713)
+	ajayID           = snowflake.ID(197867122825756672)
 )
 
 func main() {
@@ -128,11 +135,12 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 		downOption, ok := data.OptBool("down")
 		if !ok {
 			_ = event.CreateMessage(messageBuilder.
-				SetContentf("The server is currently treated as **%s**.", formatStatus(down)).
+				SetContentf(currentTemplate, formatStatus(down)).
 				Build())
 			return
 		}
-		if !isVip(event.Member().Member) {
+		member := event.Member()
+		if !isVip(member.Member) {
 			_ = event.CreateMessage(messageBuilder.
 				SetContent("This command is VIP only.").
 				SetEphemeral(true).
@@ -140,8 +148,21 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 			return
 		}
 		down = downOption
+		message := fmt.Sprintf(updateTemplate, formatStatus(down))
+		if member.User.ID == ajayID {
+			if down {
+				message += " Hope you have fun, Ajay!"
+			} else {
+				message += " Hope you had fun, Ajay."
+			}
+		}
+		if down {
+			lastDowntime = time.Now()
+		} else {
+			message += fmt.Sprintf(incidentTemplate, time.Now().Sub(lastDowntime).Minutes())
+		}
 		_ = event.CreateMessage(messageBuilder.
-			SetContentf("The server is now treated as **%s**.", formatStatus(down)).
+			SetContentf(message).
 			Build())
 	}
 }
