@@ -29,10 +29,11 @@ var (
 		"(?:can't|cannot) submit"}
 	currentTemplate  = "The server is currently treated as **%s**."
 	updateTemplate   = "The server is now treated as **%s**."
-	incidentTemplate = " Incident resolved after %0.f minutes."
+	incidentTemplate = " Incident resolved after **%.1f** hours."
+	sameTemplate     = "The status is already set to **%s**."
 	down             = false
 	regexes          []*regexp.Regexp
-	lastDowntime     time.Time
+	downtimeTime     time.Time
 	vipRoleID        = snowflake.ID(755511470305050715)
 	privateIDRegex   = regexp.MustCompile("\\b(?:[a-zA-Z\\d]{36}|[\\da-f]{96})\\b")
 	requestChannelID = snowflake.ID(1002313036545134713)
@@ -133,9 +134,10 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 	if data.CommandName() == "down" {
 		messageBuilder := discord.NewMessageCreateBuilder()
 		downOption, ok := data.OptBool("down")
+		formatted := formatStatus(down)
 		if !ok {
 			_ = event.CreateMessage(messageBuilder.
-				SetContentf(currentTemplate, formatStatus(down)).
+				SetContentf(currentTemplate, formatted).
 				Build())
 			return
 		}
@@ -147,19 +149,26 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 				Build())
 			return
 		}
+		if down == downOption {
+			_ = event.CreateMessage(messageBuilder.
+				SetContentf(sameTemplate, formatted).
+				SetEphemeral(true).
+				Build())
+			return
+		}
 		down = downOption
-		message := fmt.Sprintf(updateTemplate, formatStatus(down))
+		message := fmt.Sprintf(updateTemplate, formatted)
 		if member.User.ID == ajayID {
 			if down {
-				message += " Hope you have fun, Ajay!"
+				message += " Have fun, Ajay!"
 			} else {
 				message += " Hope you had fun, Ajay."
 			}
 		}
 		if down {
-			lastDowntime = time.Now()
+			downtimeTime = time.Now()
 		} else {
-			message += fmt.Sprintf(incidentTemplate, time.Now().Sub(lastDowntime).Minutes())
+			message += fmt.Sprintf(incidentTemplate, time.Now().Sub(downtimeTime).Hours())
 		}
 		_ = event.CreateMessage(messageBuilder.
 			SetContentf(message).
