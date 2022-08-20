@@ -157,7 +157,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 			return
 		}
 		down = downOption
-		message := fmt.Sprintf(updateTemplate, formatted)
+		message := fmt.Sprintf(updateTemplate, formatStatus(down))
 		if member.User.ID == ajayID {
 			if down {
 				message += " Have fun, Ajay!"
