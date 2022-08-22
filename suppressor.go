@@ -76,12 +76,11 @@ func main() {
 }
 
 func onReaction(event *events.GuildMessageReactionAdd) {
-	channelID := event.ChannelID
 	emoji := event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		suppressed := discord.MessageFlagSuppressEmbeds
 		client := event.Client().Rest()
-		_, _ = client.UpdateMessage(channelID, event.MessageID, discord.MessageUpdate{
+		_, _ = client.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
 			Flags: &suppressed,
 		})
 	}
