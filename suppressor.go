@@ -23,9 +23,9 @@ import (
 
 var (
 	token    = os.Getenv("SUPPRESSOR_TOKEN")
-	wordlist = []string{"5(?:\\d{2})", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
+	wordlist = []string{"\\b5(?:\\d{2})\\b", "bad gateway", "(?:is\\s+)?(?:(?:\\s+)?the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)\\s+(?:down|dead|die(?:d)?)", "overloaded", "(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api) crash(?:ed)?",
 		"(?:(?:issue|problem)(?:s)?\\s+)(?:with\\s+)?(?:the\\s+)?(?:sponsor(?:\\s+)?block|sb|server(?:s)?|api)", "exclamation mark", "segments\\s+are\\s+(?:not\\s+)?(?:showing|loading)",
-		"(?:can't|cannot) submit", "404"}
+		"(?:can't|cannot) submit", "\\b404\\b"}
 	currentTemplate  = "The server is currently treated as **%s**."
 	updateTemplate   = "The server is now treated as **%s**."
 	incidentTemplate = " Incident resolved after **%.1f** hours."
