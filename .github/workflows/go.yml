@@ -16,3 +16,9 @@ jobs:
 
     - name: Build
       run: go build -v ./...
+
+    - uses: evantorrie/mott-the-tidier@v1-beta
+
+    - uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: go mod tidy
