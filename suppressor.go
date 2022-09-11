@@ -16,6 +16,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
+	"github.com/disgoorg/disgo/json"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"golang.org/x/exp/slices"
@@ -78,10 +79,9 @@ func main() {
 func onReaction(event *events.GuildMessageReactionAdd) {
 	emoji := event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
-		suppressed := discord.MessageFlagSuppressEmbeds
 		client := event.Client().Rest()
 		_, _ = client.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
-			Flags: &suppressed,
+			Flags: json.NewPtr(discord.MessageFlagSuppressEmbeds),
 		})
 	}
 }
