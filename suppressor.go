@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -84,7 +85,7 @@ func main() {
 	if err != nil {
 		log.Panicf("error while reading file: %s", err)
 	}
-	i, _ := strconv.Atoi(string(data))
+	i, _ := strconv.Atoi(strings.TrimSpace(string(data)))
 	if i != 0 {
 		down = true
 		downtimeTime = time.Unix(int64(i), 0)
