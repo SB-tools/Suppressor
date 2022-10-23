@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"regexp"
-	"strings"
+	"strconv"
 	"syscall"
 	"time"
 
@@ -19,23 +18,35 @@ import (
 	"github.com/disgoorg/disgo/json"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/dlclark/regexp2"
 	"golang.org/x/exp/slices"
 )
 
 var (
-	token    = os.Getenv("SUPPRESSOR_TOKEN")
-	wordlist = []string{`\b5[02]\d\b`, `bad gateway`, `(?:is\s+)?(?:(?:\s+)?the\s+)?(?:sponsor(?:\s+)?block|sb|server(?:s)?|api)\s+(?:down|dead|die(?:d)?)`, `overloaded`, `(?:sponsor(?:\s+)?block|sb|server(?:s)?|api) crash(?:ed)?`,
-		`(?:(?:issue|problem)(?:s)?\s+)(?:with\s+)?(?:the\s+)?(?:sponsor(?:\s+)?block|sb|server(?:s)?|api)`, `exclamation mark`, `segments\s+are\s+(?:not\s+)?(?:showing|loading)`,
-		`(?:can't|cannot) submit`, `\b404\b`}
+	token = os.Getenv("SUPPRESSOR_TOKEN")
+
+	wordlist = []string{
+		`(?<!(?:why|how)\s+)is\s+(?:sb|sponsorblock|(?:(?:the\s+)?server))\s+(?:\w+\s+)?(?:down|dead|working)(?:(?:\s+)?\?)?`, // matches "... is (sb|sponsorblock|((the)? server)) (\w+ )?(down|dead|working)(( )?\?)" unless it starts with "why|how"
+		`code(?::)?\s+(?:\b5[02]\d\b|\b404\b|undefined)`,                                                                      // "... code(:)? (5xx|404|undefined)"
+		`(?:got|get(?:ting)?|is)\s+a\s+(?:\b5[02]\d\b|\b404\b|undefined)\s+(?:error|exception|code)`,                          // "... (got|get(ting)?|is) a (5xx|404|undefined) (error|exception|code)"
+	}
+	regexes []*regexp2.Regexp
+
 	currentTemplate  = "The server is currently treated as **%s**."
 	updateTemplate   = "The server is now treated as **%s**."
 	incidentTemplate = " Incident resolved after **%.1f** hours."
 	sameTemplate     = "The status is already set to **%s**."
-	down             = false
-	regexes          []*regexp.Regexp
-	downtimeTime     time.Time
-	vipRoleID        = snowflake.ID(755511470305050715)
-	ajayID           = snowflake.ID(197867122825756672)
+
+	down         = false
+	downtimeTime time.Time
+
+	vipRoleID  = snowflake.ID(755511470305050715)
+	ajayID     = snowflake.ID(197867122825756672)
+	channelIDs = []snowflake.ID{
+		snowflake.ID(603643299961503761), // #general
+		snowflake.ID(603643180663177220), // #questions
+		snowflake.ID(603643256714297374), // #concerns
+	}
 )
 
 func main() {
@@ -66,7 +77,17 @@ func main() {
 	}
 
 	for _, variant := range wordlist {
-		regexes = append(regexes, regexp.MustCompile(variant))
+		regexes = append(regexes, regexp2.MustCompile(variant, regexp2.IgnoreCase))
+	}
+
+	data, err := os.ReadFile("time.txt")
+	if err != nil {
+		log.Panicf("error while reading file: %s", err)
+	}
+	i, _ := strconv.Atoi(string(data))
+	if i != 0 {
+		down = true
+		downtimeTime = time.Unix(int64(i), 0)
 	}
 
 	log.Info("suppressor started")
@@ -88,24 +109,24 @@ func onReaction(event *events.GuildMessageReactionAdd) {
 
 func onMessage(event *events.GuildMessageCreate) {
 	message := event.Message
-	if message.WebhookID != nil || message.Author.Bot { // vip check should only run when needed
+	if message.WebhookID != nil || message.Author.Bot || isVip(*message.Member) {
 		return
 	}
-	member := *message.Member
 	client := event.Client().Rest()
 	channelID := event.ChannelID
-	if len(message.Stickers) != 0 && !isVip(member) {
+	if len(message.Stickers) != 0 {
 		_ = client.DeleteMessage(channelID, message.ID)
 		return
 	}
-	if !down || isVip(member) {
+	if !down || !slices.Contains(channelIDs, channelID) {
 		return
 	}
-	content := strings.ToLower(message.Content)
 	for _, regex := range regexes {
-		if regex.MatchString(content) {
+		match, _ := regex.MatchString(message.Content)
+		if match {
 			_, _ = client.CreateMessage(channelID, discord.NewMessageCreateBuilder().
-				SetContent("SponsorBlock is down at the moment. Stay updated at <https://sponsorblock.works>").
+				SetContentf("SponsorBlock has been down since %s. Stay updated at <https://sponsorblock.works>.",
+					discord.TimestampStyleShortDateTime.FormatTime(downtimeTime)).
 				Build())
 			return
 		}
@@ -148,11 +169,24 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 				message += " Hope you had fun, Ajay."
 			}
 		}
+		var unix int64
 		if down {
-			downtimeTime = time.Now()
+			now := time.Now()
+			downtimeTime = now
+			unix = now.Unix()
 		} else {
 			message += fmt.Sprintf(incidentTemplate, time.Now().Sub(downtimeTime).Hours())
 		}
+
+		// write timestamp to file
+		f, err := os.Create("time.txt")
+		if err != nil {
+			log.Errorf("error while creating file: %s", err)
+		} else {
+			_, _ = f.WriteString(strconv.FormatInt(unix, 10))
+		}
+		defer f.Close()
+
 		_ = event.CreateMessage(messageBuilder.
 			SetContentf(message).
 			Build())
