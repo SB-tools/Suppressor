@@ -80,7 +80,7 @@ func main() {
 		regexes = append(regexes, regexp2.MustCompile(variant, regexp2.IgnoreCase))
 	}
 
-	data, err := os.ReadFile("time.txt")
+	data, err := os.ReadFile("/home/cane/suppressor/time.txt")
 	if err != nil {
 		log.Panicf("error while reading file: %s", err)
 	}
@@ -179,7 +179,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 		}
 
 		// write timestamp to file
-		f, err := os.Create("time.txt")
+		f, err := os.Create("/home/cane/suppressor/time.txt")
 		if err != nil {
 			log.Errorf("error while creating file: %s", err)
 		} else {
