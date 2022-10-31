@@ -3,7 +3,7 @@ module suppressor
 go 1.19
 
 require (
-	github.com/disgoorg/disgo v0.13.20
+	github.com/disgoorg/disgo v0.13.21
 	github.com/disgoorg/log v1.2.0
 	github.com/disgoorg/snowflake/v2 v2.0.1
 	github.com/dlclark/regexp2 v1.7.0
