@@ -29,7 +29,7 @@ var (
 	wordlist = []string{
 		`(?<!(?:why|how)\s+)is\s+(?:sb|sponsorblock|(?:(?:the\s+)?server))\s+(?:\w+\s+)?(?:down|dead|working)(?:(?:\s+)?\?)?`, // matches "... is (sb|sponsorblock|((the)? server)) (\w+ )?(down|dead|working)(( )?\?)" unless it starts with "why|how"
 		`code(?::)?\s+(?:\b5[02]\d\b|\b404\b|undefined)`,                                                                      // "... code(:)? (5xx|404|undefined)"
-		`(?:got|get(?:ting)?|is)\s+a\s+(?:\b5[02]\d\b|\b404\b|undefined)\s+(?:error|exception|code)`,                          // "... (got|get(ting)?|is) a (5xx|404|undefined) (error|exception|code)"
+		`(?:got|get(?:ting)?|is)(?:\s+a)?\s+(?:\b5[02]\d\b|\b404\b|undefined)\s+(?:error|exception|code)`,                     // "... (got|get(ting)?|is)( a)? (5xx|404|undefined) (error|exception|code)"
 	}
 	regexes []*regexp2.Regexp
 
