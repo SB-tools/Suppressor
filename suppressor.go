@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/disgoorg/json"
 	"os"
 	"os/signal"
 	"strconv"
@@ -16,7 +17,6 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
-	"github.com/disgoorg/disgo/json"
 	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/dlclark/regexp2"
@@ -103,7 +103,7 @@ func onReaction(event *events.GuildMessageReactionAdd) {
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		client := event.Client().Rest()
 		_, _ = client.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
-			Flags: json.NewPtr(discord.MessageFlagSuppressEmbeds),
+			Flags: json.Ptr(discord.MessageFlagSuppressEmbeds),
 		})
 	}
 }
@@ -115,7 +115,7 @@ func onMessage(event *events.GuildMessageCreate) {
 	}
 	client := event.Client().Rest()
 	channelID := event.ChannelID
-	if len(message.Stickers) != 0 {
+	if len(message.StickerItems) != 0 {
 		_ = client.DeleteMessage(channelID, message.ID)
 		return
 	}
