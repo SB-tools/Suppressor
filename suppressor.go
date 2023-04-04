@@ -99,7 +99,7 @@ func main() {
 }
 
 func onReaction(event *events.GuildMessageReactionAdd) {
-	emoji := event.Emoji.Name
+	emoji := *event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
 		client := event.Client().Rest()
 		_, _ = client.UpdateMessage(event.ChannelID, event.MessageID, discord.MessageUpdate{
