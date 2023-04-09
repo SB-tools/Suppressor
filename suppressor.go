@@ -126,7 +126,7 @@ func onMessage(event *events.GuildMessageCreate) {
 		match, _ := regex.MatchString(message.Content)
 		if match {
 			_, _ = client.CreateMessage(channelID, discord.NewMessageCreateBuilder().
-				SetContentf("SponsorBlock has been down since %s. Stay updated at <https://sponsorblock.works>.",
+				SetContentf("SponsorBlock has been down since %s. Stay updated at <https://status.sponsor.ajay.app>.",
 					discord.TimestampStyleShortDateTime.FormatTime(downtimeTime)).
 				Build())
 			return
