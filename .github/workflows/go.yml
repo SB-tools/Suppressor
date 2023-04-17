@@ -9,9 +9,9 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.19
+        go-version: '1.20'
 
     - name: Build
       run: go build -v ./...
@@ -22,9 +22,9 @@ jobs:
     - uses: actions/checkout@v3
 
     - name: Set up Go
-      uses: actions/setup-go@v3
+      uses: actions/setup-go@v4
       with:
-        go-version: 1.19
+        go-version: '1.20'
 
     - uses: evantorrie/mott-the-tidier@v1-beta
 
