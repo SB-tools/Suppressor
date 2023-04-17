@@ -1,6 +1,6 @@
 module suppressor
 
-go 1.19
+go 1.20
 
 require (
 	github.com/disgoorg/disgo v0.16.2
