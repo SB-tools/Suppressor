@@ -66,15 +66,12 @@ func main() {
 
 	if err != nil {
 		log.Fatal("error while building disgo: ", err)
-		return
 	}
 
 	defer client.Close(context.TODO())
 
-	err = client.OpenGateway(context.TODO())
-	if err != nil {
-		log.Fatalf("error while connecting to the gateway: %s", err)
-		return
+	if err := client.OpenGateway(context.TODO()); err != nil {
+		log.Fatal("error while connecting to the gateway: ", err)
 	}
 
 	for _, variant := range wordlist {
@@ -83,7 +80,7 @@ func main() {
 
 	data, err := os.ReadFile("/home/cane/suppressor/time.txt")
 	if err != nil {
-		log.Panicf("error while reading file: %s", err)
+		log.Fatal("error while reading file: ", err)
 	}
 	i, _ := strconv.Atoi(strings.TrimSpace(string(data)))
 	if i != 0 {
@@ -182,7 +179,7 @@ func onSlashCommand(event *events.ApplicationCommandInteractionCreate) {
 		// write timestamp to file
 		f, err := os.Create("/home/cane/suppressor/time.txt")
 		if err != nil {
-			log.Errorf("error while creating file: %s", err)
+			log.Error("error while creating file: ", err)
 		} else {
 			_, _ = f.WriteString(strconv.FormatInt(unix, 10))
 		}
