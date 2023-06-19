@@ -17,8 +17,11 @@ import (
 )
 
 const (
-	vipRoleID = snowflake.ID(755511470305050715)
+	vipRoleID     = snowflake.ID(755511470305050715)
+	dearrowUserID = snowflake.ID(1114610194438181035)
 )
+
+var dearrowReplies = make(map[snowflake.ID]snowflake.ID)
 
 func main() {
 	log.SetLevel(log.LevelInfo)
@@ -53,23 +56,43 @@ func main() {
 func onReaction(event *events.GuildMessageReactionAdd) {
 	emoji := *event.Emoji.Name
 	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
+		messageID := event.MessageID
+		channelID := event.ChannelID
 		client := event.Client().Rest()
-		_, _ = client.UpdateMessage(event.ChannelID, event.MessageID, discord.NewMessageUpdateBuilder().
-			SetSuppressEmbeds(true).
-			Build())
+		if replyID, ok := dearrowReplies[messageID]; ok {
+			err := client.DeleteMessage(channelID, replyID)
+			if err != nil {
+				log.Errorf("there was an error while deleting a DeArrow reply (%d): ", replyID, err)
+			}
+			delete(dearrowReplies, messageID)
+		} else {
+			_, err := client.UpdateMessage(channelID, messageID, discord.NewMessageUpdateBuilder().
+				SetSuppressEmbeds(true).
+				Build())
+			if err != nil {
+				log.Errorf("there was an error while suppressing embeds for message %d: ", messageID, err)
+			}
+		}
 	}
 }
 
 func onMessage(event *events.GuildMessageCreate) {
 	message := event.Message
-	if message.WebhookID != nil || message.Author.Bot || isVip(*message.Member) {
+	if message.WebhookID == nil && isVip(*message.Member) {
 		return
 	}
 	client := event.Client().Rest()
 	channelID := event.ChannelID
+	messageID := message.ID
 	if len(message.StickerItems) != 0 {
-		_ = client.DeleteMessage(channelID, message.ID)
+		err := client.DeleteMessage(channelID, messageID)
+		if err != nil {
+			log.Errorf("there was an error while deleting message %d: ", messageID, err)
+		}
 		return
+	}
+	if message.Author.ID == dearrowUserID {
+		dearrowReplies[*message.MessageReference.MessageID] = messageID
 	}
 }
 
