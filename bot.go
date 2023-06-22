@@ -60,8 +60,10 @@ func onReaction(event *events.GuildMessageReactionAdd) {
 		channelID := event.ChannelID
 		client := event.Client().Rest()
 		if replies, ok := dearrowReplies[messageID]; ok {
-			if err := client.BulkDeleteMessages(channelID, replies); err != nil {
-				log.Error("there was an error while deleting DeArrow replies: ", err)
+			for _, replyID := range replies {
+				if err := client.DeleteMessage(channelID, replyID); err != nil {
+					log.Errorf("there was an error while deleting a DeArrow reply (%d): ", replyID, err)
+				}
 			}
 			delete(dearrowReplies, messageID)
 		} else {
