@@ -21,7 +21,7 @@ const (
 	dearrowUserID = snowflake.ID(1114610194438181035)
 )
 
-var dearrowReplies = make(map[snowflake.ID][]snowflake.ID)
+var dearrowReplies = make(map[snowflake.ID]snowflake.ID)
 
 func main() {
 	log.SetLevel(log.LevelInfo)
@@ -59,11 +59,9 @@ func onReaction(event *events.GuildMessageReactionAdd) {
 		messageID := event.MessageID
 		channelID := event.ChannelID
 		client := event.Client().Rest()
-		if replies, ok := dearrowReplies[messageID]; ok {
-			for _, replyID := range replies {
-				if err := client.DeleteMessage(channelID, replyID); err != nil {
-					log.Errorf("there was an error while deleting a DeArrow reply (%d): ", replyID, err)
-				}
+		if replyID, ok := dearrowReplies[messageID]; ok {
+			if err := client.DeleteMessage(channelID, replyID); err != nil {
+				log.Errorf("there was an error while deleting a DeArrow reply (%d): ", replyID, err)
 			}
 			delete(dearrowReplies, messageID)
 		} else {
@@ -93,9 +91,7 @@ func onMessage(event *events.GuildMessageCreate) {
 		return
 	}
 	if message.Author.ID == dearrowUserID {
-		parentID := *message.MessageReference.MessageID
-		replies := dearrowReplies[parentID]
-		dearrowReplies[parentID] = append(replies, messageID)
+		dearrowReplies[*message.MessageReference.MessageID] = messageID
 	}
 }
 
