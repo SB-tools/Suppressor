@@ -3,7 +3,7 @@ module suppressor
 go 1.21
 
 require (
-	github.com/disgoorg/disgo v0.18.0
+	github.com/disgoorg/disgo v0.18.1
 	github.com/disgoorg/log v1.2.1
 	github.com/disgoorg/snowflake/v2 v2.0.1
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
