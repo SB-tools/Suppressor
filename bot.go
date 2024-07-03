@@ -2,21 +2,26 @@ package main
 
 import (
 	"context"
+	"log/slog"
+	"os"
+	"os/signal"
+	"syscall"
+
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/cache"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 	"github.com/disgoorg/disgo/gateway"
-	"github.com/disgoorg/log"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/lmittmann/tint"
 	"golang.org/x/exp/slices"
-	"os"
-	"os/signal"
-	"syscall"
 )
 
 const (
+	xEmoji       = "❌"
+	successEmoji = "✅"
+
 	vipRoleID     = snowflake.ID(755511470305050715)
 	dearrowUserID = snowflake.ID(1114610194438181035)
 )
@@ -24,9 +29,10 @@ const (
 var dearrowReplies = make(map[snowflake.ID]snowflake.ID)
 
 func main() {
-	log.SetLevel(log.LevelInfo)
-	log.Info("starting the bot...")
-	log.Info("disgo version: ", disgo.Version)
+	logger := tint.NewHandler(os.Stdout, &tint.Options{
+		Level: slog.LevelInfo,
+	})
+	slog.SetDefault(slog.New(logger))
 
 	client, err := disgo.New(os.Getenv("SUPPRESSOR_TOKEN"),
 		bot.WithGatewayConfigOpts(gateway.WithIntents(gateway.IntentGuildMessages, gateway.IntentGuildMessageReactions)),
@@ -35,63 +41,71 @@ func main() {
 			OnGuildMessageReactionAdd: onReaction,
 			OnGuildMessageCreate:      onMessage,
 		}))
-
 	if err != nil {
-		log.Fatal("error while building disgo: ", err)
+		panic(err)
 	}
 
 	defer client.Close(context.TODO())
 
 	if err := client.OpenGateway(context.TODO()); err != nil {
-		log.Fatal("error while connecting to the gateway: ", err)
+		panic(err)
 	}
 
-	log.Info("suppressor bot is now running.")
-
+	slog.Info("suppressor bot is now running.")
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, syscall.SIGINT, syscall.SIGTERM, os.Interrupt, os.Kill)
 	<-s
 }
 
 func onReaction(event *events.GuildMessageReactionAdd) {
-	emoji := *event.Emoji.Name
-	if (emoji == "\u2705" || emoji == "\u274C") && isVip(event.Member) {
-		messageID := event.MessageID
-		channelID := event.ChannelID
-		client := event.Client().Rest()
-		if replyID, ok := dearrowReplies[messageID]; ok {
-			if err := client.DeleteMessage(channelID, replyID); err != nil {
-				log.Errorf("there was an error while deleting a DeArrow reply (%d): ", replyID, err)
-			}
-			delete(dearrowReplies, messageID)
-		} else {
-			_, err := client.UpdateMessage(channelID, messageID, discord.NewMessageUpdateBuilder().
-				SetSuppressEmbeds(true).
-				Build())
-			if err != nil {
-				log.Errorf("there was an error while suppressing embeds for message %d: ", messageID, err)
-			}
+	emoji := event.Emoji.Name
+	if emoji == nil {
+		return
+	}
+	if (*emoji != xEmoji && *emoji != successEmoji) || !isVip(event.Member) {
+		return
+	}
+	client := event.Client().Rest()
+	if replyID, ok := dearrowReplies[event.MessageID]; ok {
+		if err := client.DeleteMessage(event.ChannelID, replyID); err != nil {
+			slog.Error("error while deleting DeArrow reply",
+				slog.Any("reply.id", replyID),
+				slog.Any("channel.id", event.ChannelID),
+				tint.Err(err))
 		}
+		delete(dearrowReplies, event.MessageID)
+		return
+	}
+	_, err := client.UpdateMessage(event.ChannelID, event.MessageID, discord.NewMessageUpdateBuilder().
+		SetSuppressEmbeds(true).
+		Build())
+	if err != nil {
+		slog.Error("error while suppressing embeds",
+			slog.Any("message.id", event.MessageID),
+			slog.Any("channel.id", event.ChannelID),
+			tint.Err(err))
 	}
 }
 
 func onMessage(event *events.GuildMessageCreate) {
 	message := event.Message
-	if message.WebhookID == nil && isVip(*message.Member) {
+	if message.Member == nil {
 		return
 	}
-	client := event.Client().Rest()
-	channelID := event.ChannelID
-	messageID := message.ID
-	if len(message.StickerItems) != 0 {
-		err := client.DeleteMessage(channelID, messageID)
-		if err != nil {
-			log.Errorf("there was an error while deleting message %d: ", messageID, err)
-		}
+	if isVip(*message.Member) {
 		return
 	}
 	if message.Author.ID == dearrowUserID {
-		dearrowReplies[*message.MessageReference.MessageID] = messageID
+		dearrowReplies[*message.MessageReference.MessageID] = message.ID
+		return
+	}
+	if len(message.StickerItems) != 0 {
+		if err := event.Client().Rest().DeleteMessage(event.ChannelID, message.ID); err != nil {
+			slog.Error("error while deleting message with stickers",
+				slog.Any("message.id", message.ID),
+				slog.Any("user.id", message.Author.ID),
+				tint.Err(err))
+		}
 	}
 }
 
