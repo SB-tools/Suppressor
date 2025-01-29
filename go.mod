@@ -5,7 +5,7 @@ go 1.22
 require (
 	github.com/disgoorg/disgo v0.18.14
 	github.com/disgoorg/snowflake/v2 v2.0.3
-	github.com/lmittmann/tint v1.0.6
+	github.com/lmittmann/tint v1.0.7
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 )
 
