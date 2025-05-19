@@ -3,7 +3,7 @@ module suppressor
 go 1.24
 
 require (
-	github.com/disgoorg/disgo v0.18.15
+	github.com/disgoorg/disgo v0.18.16
 	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/lmittmann/tint v1.0.7
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
