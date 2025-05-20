@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/disgoorg/disgo v0.18.16
 	github.com/disgoorg/snowflake/v2 v2.0.3
-	github.com/lmittmann/tint v1.0.7
+	github.com/lmittmann/tint v1.1.0
 	golang.org/x/exp v0.0.0-20230905200255-921286631fa9
 )
 
